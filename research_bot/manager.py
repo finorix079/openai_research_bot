@@ -18,7 +18,7 @@ class ResearchManager:
         self.console = Console()
         self.printer = Printer(self.console)
 
-    async def run(self, query: str) -> None:
+    async def run(self, query: str) -> ReportData:
         trace_id = gen_trace_id()
         with trace("Research trace", trace_id=trace_id):
             self.printer.update_item(
@@ -45,9 +45,8 @@ class ResearchManager:
 
         print("\n\n=====REPORT=====\n\n")
         print(f"Report: {report.markdown_report}")
-        print("\n\n=====FOLLOW UP QUESTIONS=====\n\n")
-        follow_up_questions = "\n".join(report.follow_up_questions)
-        print(f"Follow up questions: {follow_up_questions}")
+
+        return report
 
     async def _plan_searches(self, query: str) -> WebSearchPlan:
         self.printer.update_item("planning", "Planning searches...")
