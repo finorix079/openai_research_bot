@@ -7,7 +7,7 @@ dependencies = [
     "openai-agents>=0.17.0,<1",
     "anthropic>=0.52.0",
     "rich>=13.0.0,<16",
-    "elasticdash-test",
+    "elasticdash-sdk",
 ]
 
 [project.optional-dependencies]
