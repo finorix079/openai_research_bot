@@ -1,4 +1,7 @@
-from agents import Agent, WebSearchTool
+from agents import Agent
+
+from . import get_model
+from ..tools import web_search_tool
 
 INSTRUCTIONS = (
     "You are a research assistant. Given a search term, you search the web for that term and "
@@ -11,7 +14,7 @@ INSTRUCTIONS = (
 
 search_agent = Agent(
     name="Search agent",
-    model="gpt-5.5",
+    model=get_model("gpt-5.5"),
     instructions=INSTRUCTIONS,
-    tools=[WebSearchTool()],
+    tools=[web_search_tool],
 )

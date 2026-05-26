@@ -1,7 +1,8 @@
-from openai.types.shared.reasoning import Reasoning
 from pydantic import BaseModel
 
 from agents import Agent, ModelSettings
+
+from . import get_model
 
 PROMPT = (
     "You are a helpful research assistant. Given a query, come up with a set of web searches "
@@ -25,7 +26,6 @@ class WebSearchPlan(BaseModel):
 planner_agent = Agent(
     name="PlannerAgent",
     instructions=PROMPT,
-    model="gpt-5.5",
-    model_settings=ModelSettings(reasoning=Reasoning(effort="medium")),
+    model=get_model("gpt-5.5"),
     output_type=WebSearchPlan,
 )
