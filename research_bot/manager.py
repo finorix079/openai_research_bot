@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import time
 
 from rich.console import Console
@@ -12,6 +13,11 @@ from .agents.search_agent import search_agent
 from .agents.writer_agent import ReportData, writer_agent
 from .printer import Printer
 from .tools import get_findings, reset_findings
+
+
+# Tune to your Anthropic concurrent-requests budget. Defaults to a
+# generous ceiling; override in deployments with tighter quotas.
+_MAX_PARALLEL_SEARCHES = int(os.environ.get("ANTHROPIC_CONCURRENT_REQUESTS", "100"))
 
 
 class ResearchManager:
@@ -96,9 +102,11 @@ class ResearchManager:
                 res = await self._search(item)
                 return idx, item, res
 
+            # Cap parallel search agents (see _MAX_PARALLEL_SEARCHES).
+            items = search_plan.searches[:_MAX_PARALLEL_SEARCHES]
             tasks = [
                 asyncio.create_task(wrapped(i, it))
-                for i, it in enumerate(search_plan.searches)
+                for i, it in enumerate(items)
             ]
             results: list[str] = []
             for task in asyncio.as_completed(tasks):
