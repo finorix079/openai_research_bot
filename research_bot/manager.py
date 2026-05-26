@@ -11,6 +11,7 @@ from .agents.planner_agent import WebSearchItem, WebSearchPlan, planner_agent
 from .agents.search_agent import search_agent
 from .agents.writer_agent import ReportData, writer_agent
 from .printer import Printer
+from .tools import get_findings, reset_findings
 
 
 class ResearchManager:
@@ -19,6 +20,7 @@ class ResearchManager:
         self.printer = Printer(self.console)
 
     async def run(self, query: str) -> ReportData:
+        reset_findings()
         trace_id = gen_trace_id()
         with trace("Research trace", trace_id=trace_id):
             self.printer.update_item(
@@ -91,7 +93,11 @@ class ResearchManager:
             return results
 
     async def _search(self, item: WebSearchItem) -> str | None:
-        input = f"Search term: {item.query}\nReason for searching: {item.reason}"
+        input = (
+            f"Search term: {item.query}\n"
+            f"Reason for searching: {item.reason}\n"
+            f"Preferred source: {item.source}"
+        )
         try:
             result = await Runner.run(
                 search_agent,
@@ -103,7 +109,15 @@ class ResearchManager:
 
     async def _write_report(self, query: str, search_results: list[str]) -> ReportData:
         self.printer.update_item("writing", "Thinking about report...")
-        input = f"Original query: {query}\nSummarized search results: {search_results}"
+        findings = get_findings()
+        findings_block = (
+            "\n".join(findings) if findings else "(no findings recorded)"
+        )
+        input = (
+            f"Original query: {query}\n"
+            f"Summarized search results: {search_results}\n"
+            f"Key findings recorded by the search agents:\n{findings_block}"
+        )
         result = Runner.run_streamed(
             writer_agent,
             input,
