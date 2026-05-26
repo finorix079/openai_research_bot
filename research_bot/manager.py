@@ -56,12 +56,34 @@ class ResearchManager:
             planner_agent,
             f"Query: {query}",
         )
+        plan = result.final_output_as(WebSearchPlan)
+        lines = [f"Will perform {len(plan.searches)} searches:"]
+        for i, s in enumerate(plan.searches, 1):
+            # Parens (not square brackets) — Rich's Live renderer treats
+            # [...] as style markup and would eat the source tag.
+            lines.append(f"   {i:>2}. ({s.source:<14}) {s.query}")
         self.printer.update_item(
             "planning",
-            f"Will perform {len(result.final_output.searches)} searches",
+            "\n".join(lines),
             is_done=True,
         )
-        return result.final_output_as(WebSearchPlan)
+        return plan
+
+    @staticmethod
+    def _format_tool_chain(tools: list[str]) -> str:
+        """Render a tool-call sequence, collapsing consecutive duplicates."""
+        if not tools:
+            return "(no tools)"
+        parts: list[str] = []
+        prev, count = tools[0], 1
+        for t in tools[1:]:
+            if t == prev:
+                count += 1
+            else:
+                parts.append(f"{prev}×{count}" if count > 1 else prev)
+                prev, count = t, 1
+        parts.append(f"{prev}×{count}" if count > 1 else prev)
+        return " → ".join(parts)
 
     async def _perform_searches(self, search_plan: WebSearchPlan) -> list[str]:
         with custom_span("Search the web"):
@@ -69,30 +91,47 @@ class ResearchManager:
             num_completed = 0
             num_succeeded = 0
             num_failed = 0
-            tasks = [asyncio.create_task(self._search(item)) for item in search_plan.searches]
-            results = []
+
+            async def wrapped(idx: int, item: WebSearchItem):
+                res = await self._search(item)
+                return idx, item, res
+
+            tasks = [
+                asyncio.create_task(wrapped(i, it))
+                for i, it in enumerate(search_plan.searches)
+            ]
+            results: list[str] = []
             for task in asyncio.as_completed(tasks):
-                result = await task
+                idx, item, result = await task
                 if result is not None:
-                    results.append(result)
+                    summary, tool_calls = result
+                    results.append(summary)
                     num_succeeded += 1
+                    self.printer.update_item(
+                        f"search_done_{idx}",
+                        f"Search {idx+1} ({item.source}): "
+                        f"{self._format_tool_chain(tool_calls)}",
+                        is_done=True,
+                    )
                 else:
                     num_failed += 1
+                    self.printer.update_item(
+                        f"search_done_{idx}",
+                        f"Search {idx+1} ({item.source}): FAILED",
+                        is_done=True,
+                    )
                 num_completed += 1
                 status = f"Searching... {num_completed}/{len(tasks)} finished"
                 if num_failed:
                     status += f" ({num_succeeded} succeeded, {num_failed} failed)"
-                self.printer.update_item(
-                    "searching",
-                    status,
-                )
+                self.printer.update_item("searching", status)
             summary = f"Searches finished: {num_succeeded}/{len(tasks)} succeeded"
             if num_failed:
                 summary += f", {num_failed} failed"
             self.printer.update_item("searching", summary, is_done=True)
             return results
 
-    async def _search(self, item: WebSearchItem) -> str | None:
+    async def _search(self, item: WebSearchItem) -> tuple[str, list[str]] | None:
         input = (
             f"Search term: {item.query}\n"
             f"Reason for searching: {item.reason}\n"
@@ -103,7 +142,12 @@ class ResearchManager:
                 search_agent,
                 input,
             )
-            return str(result.final_output)
+            tool_calls = [
+                it.tool_name
+                for it in result.new_items
+                if getattr(it, "type", None) == "tool_call_item"
+            ]
+            return str(result.final_output), tool_calls
         except Exception:
             return None
 
