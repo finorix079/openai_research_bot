@@ -4,7 +4,7 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-from elasticdash_test.observability import init_observability, shutdown_observability, ObservabilityOptions, start_trace, end_trace
+from elasticdash_sdk.observability import init_observability, shutdown_observability, ObservabilityOptions, start_trace, end_trace
 
 
 def input_with_fallback(prompt: str, fallback: str) -> str:

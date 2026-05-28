@@ -18,7 +18,7 @@ from typing import Any
 import anthropic
 import httpx
 from agents import function_tool
-from elasticdash_test import ed_tool
+from elasticdash_sdk import ed_tool
 
 from .kb import KB_DOCS
 
