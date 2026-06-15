@@ -1,9 +1,9 @@
-# Agent used to synthesize a final report from the individual summaries.
 from pydantic import BaseModel
 
 from agents import Agent
 
-from . import get_model
+from . import STRONG_MODEL
+
 
 PROMPT = (
     "You are a senior researcher tasked with writing a cohesive report for a research query. "
@@ -18,18 +18,13 @@ PROMPT = (
 
 class ReportData(BaseModel):
     short_summary: str
-    """A short 2-3 sentence summary of the findings."""
-
     markdown_report: str
-    """The final report"""
-
     follow_up_questions: list[str]
-    """Suggested topics to research further"""
 
 
 writer_agent = Agent(
     name="WriterAgent",
     instructions=PROMPT,
-    model=get_model("gpt-5-mini"),
+    model=STRONG_MODEL,
     output_type=ReportData,
 )

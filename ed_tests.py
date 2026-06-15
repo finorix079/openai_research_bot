@@ -1,6 +1,5 @@
-"""Ed-test definitions for the research bot."""
-from elasticdash_test.ci.test_registry import define_test
-from elasticdash_test.ci.types import TestBenchmarks
+from elasticdash_sdk.ci.test_registry import define_test
+from elasticdash_sdk.ci.types import TestBenchmarks
 
 define_test({
     "name": "research bot e2e",
